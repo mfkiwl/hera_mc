@@ -3718,7 +3718,6 @@ class MCSession(Session):
         """
         from .qm import ArrayMetrics
 
-        args = []
         if metric is not None:
             filter_column = 'metric'
         else:
