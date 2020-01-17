@@ -3670,7 +3670,6 @@ class MCSession(Session):
             time = Time(time, format='gps')
         return time
 
-
     def get_ant_metric(self, ant=None, pol=None, metric=None, starttime=None,
                        stoptime=None, write_to_file=False, filename=None):
         """
