@@ -96,7 +96,8 @@ class MCSession(Session):
     def _time_filter(self, table_class, time_column, most_recent=None,
                      starttime=None, stoptime=None,
                      filter_column=None, filter_value=None,
-                     write_to_file=False, filename=None):
+                     write_to_file=False, filename=None,
+                     return_query=False):
         """
         Fiter entries by time, used by most get methods on this object.
 
@@ -137,6 +138,9 @@ class MCSession(Session):
             Name of file to write to. If not provided, defaults to a file in the
             current directory named based on the table name.
             Ignored if write_to_file is False.
+        return_query : bool
+            Return the query object, rather than a list of results.
+            Defaults to False. Superceded by write_to_file.
 
         Returns
         -------
@@ -203,6 +207,8 @@ class MCSession(Session):
 
         if write_to_file:
             self._write_query_to_file(query, table_class, filename=filename)
+        elif return_query:
+            return query
         else:
             return query.all()
 
@@ -3636,7 +3642,7 @@ class MCSession(Session):
         self.add(AntMetrics.create(obsid, ant, pol, metric, db_time, val))
 
     def get_ant_metric(self, ant=None, pol=None, metric=None, starttime=None,
-                       stoptime=None):
+                       stoptime=None, write_to_file=False, filename=None):
         """
         Get antenna metric(s) from the M&C database.
 
@@ -3652,6 +3658,12 @@ class MCSession(Session):
             Beginning of query time interval. Defaults to gps=0 (6 Jan, 1980)
         stoptime : astropy Time object OR gps second.
             End of query time interval. Defaults to now.
+        write_to_file : bool
+            Option to write records to a CSV file.
+        filename : str
+            Name of file to write to. If not provided, defaults to a file in the
+            current directory named based on the table name.
+            Ignored if write_to_file is False.
 
         Returns
         -------
@@ -3660,6 +3672,12 @@ class MCSession(Session):
         """
         from .qm import AntMetrics
 
+        if not isinstance(starttime, Time):
+            starttime = Time(starttime, format='gps')
+        if not isinstance(stoptime, Time):
+            stoptime = Time(stoptime, format='gps')
+        query = self._time_filter(AntMetrics, 'obsid', starttime=starttime,
+                                  stoptime=stoptime, return_query=True)
         args = []
         if ant is not None:
             args.append(AntMetrics.ant.in_(get_iterable(ant)))
@@ -3667,16 +3685,11 @@ class MCSession(Session):
             args.append(AntMetrics.pol.in_(get_iterable(pol)))
         if metric is not None:
             args.append(AntMetrics.metric.in_(get_iterable(metric)))
-        if starttime is None:
-            starttime = 0
-        elif isinstance(starttime, Time):
-            starttime = starttime.gps
-        if stoptime is None:
-            stoptime = Time.now().gps
-        elif isinstance(stoptime, Time):
-            stoptime = stoptime.gps
-        args.append(AntMetrics.obsid.between(starttime, stoptime))
-        return self.query(AntMetrics).filter(*args).all()
+        query = query.filter(*args)
+        if write_to_file:
+            self._write_query_to_file(query, ArrayMetrics, filename=filename)
+        else:
+            return query.all()
 
     def add_array_metric(self, obsid, metric, val):
         """
@@ -3698,7 +3711,8 @@ class MCSession(Session):
 
         self.add(ArrayMetrics.create(obsid, metric, db_time, val))
 
-    def get_array_metric(self, metric=None, starttime=None, stoptime=None):
+    def get_array_metric(self, metric=None, starttime=None, stoptime=None,
+                         write_to_file=False, filename=None):
         """
         Get array metric(s) from the M&C database.
 
@@ -3706,10 +3720,16 @@ class MCSession(Session):
         ----------
         metric : str or list of strings
             Metric name. Defaults to returning all metrics.
-        starttime : astropy Time object OR gps second.
+        starttime : astropy Time object OR gps second
             Beginning of query time interval. Defaults to gps=0 (6 Jan, 1980)
-        stoptime : astropy Time object OR gps second.
+        stoptime : astropy Time object OR gps second
             End of query time interval. Defaults to now.
+        write_to_file : bool
+            Option to write records to a CSV file.
+        filename : str
+            Name of file to write to. If not provided, defaults to a file in the
+            current directory named based on the table name.
+            Ignored if write_to_file is False.
 
         Returns
         -------
@@ -3718,13 +3738,20 @@ class MCSession(Session):
         """
         from .qm import ArrayMetrics
 
+        if not isinstance(starttime, Time):
+            starttime = Time(starttime, format='gps')
+        if not isinstance(stoptime, Time):
+            stoptime = Time(stoptime, format='gps')
+        query = self._time_filter(ArrayMetrics, starttime=starttime,
+                                  stoptime=stoptime, return_query=True)
+        args = []
         if metric is not None:
-            filter_column = 'metric'
+            args.append(ArrayMetrics.metric.in_(get_iterable(metric)))
+        query = query.filter(*args)
+        if write_to_file:
+            self._write_query_to_file(query, ArrayMetrics, filename=filename)
         else:
-            filter_column = None
-        return self._time_filter(ArrayMetrics, 'obsid', starttime=starttime,
-                                 stoptime=stoptime, filter_column=filter_column,
-                                 filter_value=metric)
+            return query.all()
 
     def add_metric_desc(self, metric, desc):
         """
