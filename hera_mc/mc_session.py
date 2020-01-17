@@ -3641,7 +3641,7 @@ class MCSession(Session):
 
         self.add(AntMetrics.create(obsid, ant, pol, metric, db_time, val))
 
-    def _metric_time_to_time_filter(time, start=True):
+    def _metric_time_to_time_filter(self, time, start=True):
         """
         Aligns time keywords between metric functions and _time_filter.
 
