@@ -3641,7 +3641,7 @@ class MCSession(Session):
 
         self.add(AntMetrics.create(obsid, ant, pol, metric, db_time, val))
 
-    def _metric_time_to_time_filter(self, time, start=True):
+    def _metric_time_to_time_filter(self, starttime, stoptime):
         """
         Aligns time keywords between metric functions and _time_filter.
 
@@ -3650,25 +3650,27 @@ class MCSession(Session):
 
         Parameters
         ----------
-        time : astropy Time object OR gps second.
-            Time keyword to be converted from metric input to _time_filter input
-        start : bool, optional
-            If True (default), time is interpreted as a starttime. Otherwise
-            interpreted as a stop time.
+        starttime : astropy Time object OR gps second.
+            starttime keyword to be converted from metric input to _time_filter input
+        stoptime : astropy Time object OR gps second.
+            starttime keyword to be converted from metric input to _time_filter input
 
         Returns
         -------
-        time : astropy Time object
-            The start- or stoptime to be passed to _time_filter.
+        starttime : astropy Time object
+            The starttime to be passed to _time_filter.
+        stoptime : astropy Time object
+            The stoptime to be passed to _time_filter.
         """
-        if time is None:
-            if start:
-                time = Time(0, format='gps')
-            else:
-                time = Time.now()
-        elif not isinstance(time, Time):
-            time = Time(time, format='gps')
-        return time
+        if starttime is None:
+            starttime = Time(0, format='gps')
+        elif not isinstance(starttime, Time):
+            starttime = Time(starttime, format='gps')
+        if stoptime is None:
+            stoptime = Time(0, format='gps')
+        elif not isinstance(starttime, Time):
+            stoptime = Time(stoptime, format='gps')
+        return starttime, stoptime
 
     def get_ant_metric(self, ant=None, pol=None, metric=None, starttime=None,
                        stoptime=None, write_to_file=False, filename=None):
@@ -3701,8 +3703,7 @@ class MCSession(Session):
         """
         from .qm import AntMetrics
 
-        starttime = self._metric_time_to_time_filter(starttime, start=True)
-        stoptime = self._metric_time_to_time_filter(stoptime, start=False)
+        starttime, stoptime = self._metric_time_to_time_filter(starttime, stoptime)
         query = self._time_filter(AntMetrics, 'obsid', starttime=starttime,
                                   stoptime=stoptime, return_query=True)
         args = []
@@ -3765,8 +3766,7 @@ class MCSession(Session):
         """
         from .qm import ArrayMetrics
 
-        starttime = self._metric_time_to_time_filter(starttime, start=True)
-        stoptime = self._metric_time_to_time_filter(stoptime, start=False)
+        starttime, stoptime = self._metric_time_to_time_filter(starttime, stoptime)
         query = self._time_filter(ArrayMetrics, 'obsid', starttime=starttime,
                                   stoptime=stoptime, return_query=True)
         args = []
