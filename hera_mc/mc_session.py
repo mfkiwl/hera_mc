@@ -3641,6 +3641,36 @@ class MCSession(Session):
 
         self.add(AntMetrics.create(obsid, ant, pol, metric, db_time, val))
 
+    def _metric_time_to_time_filter(time, start=True):
+        """
+        Aligns time keywords between metric functions and _time_filter.
+
+        Convert times passed into antenna or array metrics to the format and
+        default used in _time_filter.
+
+        Parameters
+        ----------
+        time : astropy Time object OR gps second.
+            Time keyword to be converted from metric input to _time_filter input
+        start : bool, optional
+            If True (default), time is interpreted as a starttime. Otherwise
+            interpreted as a stop time.
+
+        Returns
+        -------
+        time : astropy Time object
+            The start- or stoptime to be passed to _time_filter.
+        """
+        if time is None:
+            if start:
+                time = Time(0, format='gps')
+            else:
+                time = Time.now()
+        elif not isinstance(time, Time):
+            time = Time(time, format='gps')
+        return time
+
+
     def get_ant_metric(self, ant=None, pol=None, metric=None, starttime=None,
                        stoptime=None, write_to_file=False, filename=None):
         """
@@ -3672,12 +3702,8 @@ class MCSession(Session):
         """
         from .qm import AntMetrics
 
-        if not (starttime is None or isinstance(starttime, Time)):
-            # Convert gps to astropy Time object, but leave None alone
-            starttime = Time(starttime, format='gps')
-        if not (stoptime is None or isinstance(stoptime, Time)):
-            # Convert gps to astropy Time object, but leave None alone
-            stoptime = Time(stoptime, format='gps')
+        starttime = self._metric_time_to_time_filter(starttime, start=True)
+        stoptime = self._metric_time_to_time_filter(stoptime, start=False)
         query = self._time_filter(AntMetrics, 'obsid', starttime=starttime,
                                   stoptime=stoptime, return_query=True)
         args = []
@@ -3740,12 +3766,8 @@ class MCSession(Session):
         """
         from .qm import ArrayMetrics
 
-        if not (starttime is None or isinstance(starttime, Time)):
-            # Convert gps to astropy Time object, but leave None alone
-            starttime = Time(starttime, format='gps')
-        if not (stoptime is None or isinstance(stoptime, Time)):
-            # Convert gps to astropy Time object, but leave None alone
-            stoptime = Time(stoptime, format='gps')
+        starttime = self._metric_time_to_time_filter(starttime, start=True)
+        stoptime = self._metric_time_to_time_filter(stoptime, start=False)
         query = self._time_filter(ArrayMetrics, 'obsid', starttime=starttime,
                                   stoptime=stoptime, return_query=True)
         args = []
